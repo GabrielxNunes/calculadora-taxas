@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Pro</title>
+    <style>
+        /* Variáveis de Cores - Modo Claro */
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --chip-active: #2563eb;
+        }
+
+        /* Variáveis de Cores - Modo Escuro */
+        body.dark-mode {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --chip-active: #3b82f6;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; transition: all 0.2s ease; }
+
+        body { 
+            background-color: var(--bg); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 15px; 
+            display: flex; 
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container { 
+            width: 100%; 
+            max-width: 450px; 
+            background: var(--card-bg); 
+            padding: 24px; 
+            border-radius: 28px; 
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        /* Botão de Tema */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        h2 { margin-top: 10px; font-weight: 800; color: var(--primary); }
+
+        .form-group { margin-bottom: 20px; }
+
+        label { display: block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: var(--text-muted); letter-spacing: 1px; }
+
+        input, select { 
+            width: 100%; padding: 14px; border: 2px solid var(--border); border-radius: 16px; 
+            font-size: 1rem; outline: none; background: var(--card-bg); color: var(--text-main);
+        }
+
+        input:focus { border-color: var(--primary); }
+
+        .header-chips { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+
+        .btn-clear { 
+            background: none; border: none; color: var(--primary); 
+            font-size: 0.75rem; font-weight: 700; cursor: pointer; text-decoration: underline;
+        }
+
+        .chips-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+            gap: 8px;
+            margin-bottom: 25px;
+        }
+
+        .chip {
+            padding: 12px 5px; border: 2px solid var(--border); border-radius: 14px;
+            text-align: center; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+            color: var(--text-muted); background: var(--card-bg);
+        }
+
+        .chip.active {
+            background: var(--chip-active); color: #fff; border-color: var(--chip-active);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+
+        .card-res {
+            padding: 18px; border-radius: 20px; background: var(--bg);
+            border: 1px solid var(--border); display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 12px;
+        }
+
+        .card-info .label { font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
+        .card-info .valor { font-size: 1.2rem; font-weight: 800; color: var(--primary); display: block; margin: 2px 0; }
+        .card-info .total { font-size: 0.8rem; color: var(--text-muted); }
+
+        .btn-whatsapp {
+            background: #25d366; color: white; border: none; width: 42px; height: 42px;
+            border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+
+        .empty-state { text-align: center; padding: 40px 10px; color: var(--text-muted); font-size: 0.9rem; }
+    </style>
+</head>
+<body id="body">
+
+<div class="container">
+    <button class="theme-toggle" onclick="toggleTheme()" title="Alternar Tema">
+        <span id="theme-icon">🌙</span>
+    </button>
+
+    <h2>Simulador de Taxas</h2>
+
+    <div class="form-group">
+        <label>Maquininha</label>
+        <select id="maquininha" onchange="salvarPreferencias(); calcular()">
+            <option value="ton">Ton</option>
+            <option value="infinite">InfinitePay</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Valor a Receber</label>
+        <input type="number" id="valor" placeholder="R$ 0,00" inputmode="decimal" oninput="calcular()">
+    </div>
+
+    <div class="header-chips">
+        <label>Comparar Parcelas</label>
+        <button class="btn-clear" onclick="limparTudo()">Limpar tudo</button>
+    </div>
+    
+    <div class="chips-container" id="chips"></div>
+
+    <div id="resultados"></div>
+</div>
+
+<script>
+const taxas = {
+    ton:{
+        debito:{taxa:2.01,mult:1.0201}, 1:{taxa:5.24,mult:1.0524}, 2:{taxa:11,mult:1.11}, 3:{taxa:12.72,mult:1.1272},
+        4:{taxa:14.46,mult:1.1446}, 5:{taxa:16.23,mult:1.1623}, 6:{taxa:18.02,mult:1.1802}, 7:{taxa:19.83,mult:1.1983},
+        8:{taxa:21.66,mult:1.2166}, 9:{taxa:23.51,mult:1.2351}, 10:{taxa:25.37,mult:1.2537}, 11:{taxa:27.27,mult:1.2727}, 12:{taxa:29.18,mult:1.2918}
+    },
+    infinite:{
+        debito:{taxa:3.15,mult:1.0315}, 1:{taxa:3.15,mult:1.0315}, 2:{taxa:5.39,mult:1.0539}, 3:{taxa:6.12,mult:1.0612},
+        4:{taxa:6.85,mult:1.0685}, 5:{taxa:7.57,mult:1.0757}, 6:{taxa:8.28,mult:1.0828}, 7:{taxa:8.99,mult:1.0899},
+        8:{taxa:9.69,mult:1.0969}, 9:{taxa:10.38,mult:1.1038}, 10:{taxa:11.06,mult:1.1106}, 11:{taxa:11.74,mult:1.1174}, 12:{taxa:12.4,mult:1.124}
+    }
+}
+
+let selecionados = new Set();
+
+// Lógica de Tema
+function toggleTheme() {
+    const body = document.getElementById('body');
+    const icon = document.getElementById('theme-icon');
+    body.classList.toggle('dark-mode');
+    
+    const isDark = body.classList.contains('dark-mode');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    icon.innerText = isDark ? '☀️' : '🌙';
+}
+
+// Carrega tema salvo
+if (localStorage.getItem('theme') === 'dark') {
+    document.getElementById('body').classList.add('dark-mode');
+    document.getElementById('theme-icon').innerText = '☀️';
+}
+
+function renderizarChips() {
+    const container = document.getElementById('chips');
+    const opcoes = ['debito', '1', '2', '3', '4', '5', '6', '10', '12'];
+    container.innerHTML = opcoes.map(op => `
+        <div class="chip ${selecionados.has(op) ? 'active' : ''}" onclick="toggleOption('${op}')">
+            ${op === 'debito' ? 'Débito' : op + 'x'}
+        </div>
+    `).join('');
+}
+
+function toggleOption(op) {
+    selecionados.has(op) ? selecionados.delete(op) : selecionados.add(op);
+    renderizarChips();
+    calcular();
+}
+
+function limparTudo() {
+    selecionados.clear();
+    renderizarChips();
+    calcular();
+}
+
+function formatar(v) {
+    return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function salvarPreferencias() {
+    localStorage.setItem('maquinaPref', document.getElementById("maquininha").value);
+}
+
+function compartilharZap(nome, parcela, total) {
+    const texto = encodeURIComponent(`*Simulação de Pagamento*\n\n🔹 ${nome}\n💰 Parcela: ${parcela}\n✅ Total: ${total}`);
+    window.open(`https://wa.me/?text=${texto}`);
+}
+
+function calcular() {
+    const valorInput = document.getElementById("valor").value;
+    const resContainer = document.getElementById("resultados");
+    
+    if (!valorInput || valorInput <= 0) {
+        resContainer.innerHTML = '<div class="empty-state">Informe o valor acima para calcular as taxas.</div>';
+        return;
+    }
+
+    if (selecionados.size === 0) {
+        resContainer.innerHTML = '<div class="empty-state">Selecione as opções de parcelas para comparar.</div>';
+        return;
+    }
+
+    const valor = parseFloat(valorInput);
+    const maquina = document.getElementById("maquininha").value;
+    let html = "";
+    const ordem = ['debito', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+    
+    ordem.forEach(key => {
+        if (selecionados.has(key)) {
+            const d = taxas[maquina][key];
+            const total = valor * d.mult;
+            const nParc = key === "debito" ? 1 : parseInt(key);
+            const vParc = total / nParc;
+            const nome = key === 'debito' ? 'Débito' : (key === '1' ? 'Crédito à Vista' : `${key}x no Cartão`);
+
+            html += `
+                <div class="card-res">
+                    <div class="card-info">
+                        <span class="label">${nome}</span>
+                        <span class="valor">${nParc}x de ${formatar(vParc)}</span>
+                        <span class="total">Paga no total: ${formatar(total)}</span>
+                    </div>
+                    <button class="btn-whatsapp" onclick="compartilharZap('${nome}', '${nParc}x de ${formatar(vParc)}', '${formatar(total)}')">
+                        <svg width="20" height="20" fill="white" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
+                    </button>
+                </div>
+            `;
+        }
+    });
+    resContainer.innerHTML = html;
+}
+
+// Prefs iniciais
+const pref = localStorage.getItem('maquinaPref');
+if(pref) document.getElementById("maquininha").value = pref;
+renderizarChips();
+calcular();
+</script>
+
+</body>
+</html>
